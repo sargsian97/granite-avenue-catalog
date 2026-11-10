@@ -163,7 +163,7 @@ button{font:inherit;color:inherit}
   <img class="foot-logo" src="logo/wordmark.png" alt="ՔԱՐԱՐՎԵՍՏ STONES" loading="lazy">
   <p class="foot-lead">Գնի և առկայության համար գրեք մեզ</p>
   <div class="foot-actions">
-    <a class="btn primary" href="https://wa.me/37499989488" target="_blank" rel="noopener">WhatsApp</a>
+    <a class="btn primary" id="fwrite" href="https://wa.me/37499989488" target="_blank" rel="noopener">WhatsApp</a>
     <a class="btn" href="tel:+37499989488">+374 99 989488</a>
     <a class="btn" href="https://instagram.com/qararvest.stones" target="_blank" rel="noopener">@qararvest.stones</a>
   </div>
@@ -188,7 +188,18 @@ button{font:inherit;color:inherit}
 <script>
 const STONES = [{"n": 1, "name": "Kashmir White", "type": "granite"}, {"n": 2, "name": "River White", "type": "granite"}, {"n": 3, "name": "Viscount White", "type": "granite"}, {"n": 4, "name": "Bianco Sardo", "type": "granite"}, {"n": 5, "name": "Bianco Antico", "type": "granite"}, {"n": 6, "name": "Alaska White", "type": "granite"}, {"n": 7, "name": "Delicatus White", "type": "granite"}, {"n": 8, "name": "Costa Esmeralda", "type": "granite"}, {"n": 9, "name": "Typhoon Green", "type": "granite"}, {"n": 10, "name": "Juparana Colombo", "type": "granite"}, {"n": 11, "name": "Panda Gold", "type": "granite"}, {"n": 12, "name": "Juparana India", "type": "granite"}, {"n": 13, "name": "Tropical Juparana", "type": "granite"}, {"n": 14, "name": "Lavender Blue", "type": "granite"}, {"n": 15, "name": "Multicolor Red", "type": "granite"}, {"n": 16, "name": "Paradiso Bash", "type": "granite"}, {"n": 17, "name": "Magma Gold", "type": "granite"}, {"n": 18, "name": "Tan Brown", "type": "granite"}, {"n": 19, "name": "Silver Paradiso", "type": "granite"}, {"n": 20, "name": "Paradiso Classico", "type": "granite"}, {"n": 21, "name": "Silver Cloud", "type": "granite"}, {"n": 22, "name": "Blue Pearl", "type": "granite"}, {"n": 23, "name": "Black Forest", "type": "granite"}, {"n": 24, "name": "Cosmic Black", "type": "granite"}, {"n": 25, "name": "Via Lattea", "type": "granite"}, {"n": 26, "name": "Snowflake Black", "type": "granite"}, {"n": 27, "name": "Black Pearl", "type": "granite"}, {"n": 28, "name": "Absolute Black", "type": "granite"}, {"n": 29, "name": "Black Galaxy", "type": "granite"}, {"n": 30, "name": "Bianco Carrara", "type": "marble"}, {"n": 31, "name": "Mugla White", "type": "marble"}, {"n": 32, "name": "Arabescato", "type": "marble"}, {"n": 33, "name": "Panda White", "type": "marble"}, {"n": 34, "name": "Crema Marfil", "type": "marble"}, {"n": 35, "name": "Verde Guatemala", "type": "marble"}, {"n": 36, "name": "Emperador Dark", "type": "marble"}, {"n": 37, "name": "Saint Laurent", "type": "marble"}, {"n": 38, "name": "Emperador Grey", "type": "marble"}, {"n": 39, "name": "Nero Marquina", "type": "marble"}, {"n": 40, "name": "Pure White", "type": "quartz"}, {"n": 41, "name": "Light Grey", "type": "quartz"}, {"n": 42, "name": "Dalmata", "type": "quartz"}, {"n": 43, "name": "Statuario", "type": "quartz"}, {"n": 44, "name": "Carrara", "type": "quartz"}, {"n": 45, "name": "Calacatta Venato", "type": "quartz"}, {"n": 46, "name": "Calacatta Classic", "type": "quartz"}, {"n": 47, "name": "Nero Marquina", "type": "quartz"}];
 const TYPES = {granite: ["Գրանիտ", "գրանիտ"], marble: ["Մարմար", "մարմար"], quartz: ["Քվարց", "քվարց"]};
-const WA = "37499989488", TEL = "+37499989488";
+const WA = "37499989488", TEL = "+37499989488", IG = "qararvest.stones", FB = "qararvest.stones";
+
+// The client writes where the link was sent. Instagram and Facebook/Messenger open links in their own browser and name
+// themselves in the user agent; WhatsApp opens the phone's browser, so WhatsApp is the default. ?from=ig|fb|wa forces one.
+const UA = navigator.userAgent;
+const CH = {ig: "ig", fb: "fb", wa: "wa"}[new URLSearchParams(location.search).get("from")]
+  || (/Instagram/i.test(UA) ? "ig" : /FBAN|FBAV|FB_IAB|FBIOS|Messenger/i.test(UA) ? "fb" : "wa");
+const CHAT = {
+  wa: {short: "WhatsApp", label: "Գրել WhatsApp-ով", url: m => `https://wa.me/${WA}` + (m ? `?text=${encodeURIComponent(m)}` : "")},
+  ig: {short: "Instagram Direct", label: "Գրել Instagram-ով", url: () => `https://ig.me/m/${IG}`},  // Instagram takes no ready text
+  fb: {short: "Messenger", label: "Գրել Messenger-ով", url: m => `https://m.me/${FB}` + (m ? `?text=${encodeURIComponent(m)}` : "")},
+}[CH];
 const $ = s => document.querySelector(s);
 const pad = n => String(n).padStart(2, "0");
 const esc = s => s.replace(/[&<>"]/g, c => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;"}[c]));
@@ -212,20 +223,30 @@ $("#grid").addEventListener("click", e => { const b = e.target.closest(".tile");
 // viewer: one slide per stone, swiped by hand (native scroll-snap), photos load around the current one
 const viewer = $("#viewer"), track = $("#track");
 track.innerHTML = STONES.map(s => {
-  const msg = encodeURIComponent(`Բարև Ձեզ, ինձ հետաքրքրում է № ${pad(s.n)} քարը (${s.name})`);
+  const msg = `Բարև Ձեզ, ինձ հետաքրքրում է № ${pad(s.n)} քարը (${s.name})`;
+  const attrs = CH === "wa" ? 'target="_blank" rel="noopener"' : `data-copy="${esc(msg)}"`;
+  const note = CH === "wa" ? "Գնի և առկայության համար գրեք մեզ" : `Գնի և առկայության համար գրեք մեզ՝ նշելով № ${pad(s.n)}`;
   return `<article class="slide" aria-label="№ ${pad(s.n)} ${esc(s.name)}">
     <figure class="photo"><img data-src="img/${pad(s.n)}.jpg" alt="${esc(s.name)}"></figure>
     <div class="info">
       <p class="v-meta">№ ${pad(s.n)}<i></i>${TYPES[s.type][0]}</p>
       <h3 class="v-name">${esc(s.name)}</h3>
       <div class="v-actions">
-        <a class="btn primary" href="https://wa.me/${WA}?text=${msg}" target="_blank" rel="noopener">Գրել WhatsApp-ով</a>
+        <a class="btn primary" href="${esc(CHAT.url(msg))}" ${attrs}>${CHAT.label}</a>
         <a class="btn" href="tel:${TEL}">Զանգել</a>
       </div>
-      <p class="v-note">Գնի և առկայության համար գրեք մեզ</p>
+      <p class="v-note">${note}</p>
     </div></article>`;
 }).join("");
 const slides = [...track.children];
+// Instagram/Messenger: put the ready text on the clipboard too, so the client can paste it (best effort)
+track.addEventListener("click", e => {
+  const a = e.target.closest("a[data-copy]");
+  if (a && navigator.clipboard) navigator.clipboard.writeText(a.dataset.copy).catch(() => {});
+});
+const fw = $("#fwrite");
+fw.href = CHAT.url(""); fw.textContent = CHAT.short;
+if (CH !== "wa") { fw.removeAttribute("target"); fw.removeAttribute("rel"); }
 let cur = 0, pushed = false, hideTimer, raf;
 
 function load(i) {
